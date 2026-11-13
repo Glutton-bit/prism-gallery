@@ -1,0 +1,7 @@
+PRISM GALLERY — ANDROID CONVERSION PACKAGE
+
+This folder contains your original gallery project plus the exact Android conversion requirements.
+
+IMPORTANT: This is NOT an APK yet. It is the original source project prepared for an AI coding tool or Android developer to convert. The original app depends on a web server and database, so simply opening it in an APK builder will not make a working gallery.
+
+Use the file ANDROID_CONVERSION_TASK.txt as the instructions for the AI coding tool/developer. Keep this entire folder together when uploading the project. Do not upload only one source file.

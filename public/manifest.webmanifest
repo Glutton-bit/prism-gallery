@@ -1,0 +1,20 @@
+{
+  "name": "Prism Gallery",
+  "short_name": "Prism",
+  "description": "Liquid-glass gallery with camera-only home, albums, private vault, trash, editor and video player.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#07090f",
+  "theme_color": "#0a84ff",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "share_target": {
+    "action": "/",
+    "method": "GET",
+    "params": { "title": "title" }
+  }
+}

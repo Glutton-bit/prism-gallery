@@ -1,0 +1,36 @@
+PRISM GALLERY — ANDROID APK CONVERSION TASK
+
+Use this project as the source project. Do not redesign it or replace it with a simplified gallery.
+
+GOAL
+Create a real installable Android APK for this existing gallery while preserving its screens, visual design, and existing user-facing features as closely as possible.
+
+NON-NEGOTIABLE REQUIREMENTS
+1. Keep the existing React/Next.js UI and styling. Do not rewrite the app as a small demo or remove screens/features.
+2. The Home screen must show only the Camera folder. The Albums screen must show the other albums and folders.
+3. Preserve normal multi-selection and the press-and-hold (~2 seconds) then drag selection/deselection gesture.
+4. Preserve the viewer, photo editor, video player/editor, albums, sorting, pinning/reordering, favourites, archive, trash, search, settings, and private vault.
+5. Preserve independent AVIF decoding. src/lib/imaging.ts uses @jsquash/avif and expects /codecs/avif_dec.wasm. The uploaded project currently does not include that WASM asset. Restore/package the correct decoder asset and verify it works in the Android WebView. Do not rely only on Android's native image decoder.
+6. The app must work locally on the phone without requiring a remote PostgreSQL server or a permanently running external website.
+7. Replace server-only storage/database/API functionality with Android-compatible local storage and media access. Use MediaStore/Storage Access Framework and a local database. Respect Android permission and delete-confirmation rules.
+8. Keep private-vault encryption secure using Android Keystore-backed key handling and authenticated encryption. Do not store vault passwords or keys in plaintext.
+9. Target Android 10+ and pay special attention to low-memory devices (4 GB RAM). Avoid loading full-resolution images unnecessarily.
+10. Do not claim a feature works until it is implemented and tested. Provide a feature checklist identifying anything that cannot be preserved exactly and why.
+
+IMPORTANT PROJECT FACTS
+- This is a Next.js 16 / React 19 TypeScript project, not an existing Android Studio project.
+- Backend routes are under src/app/api/.
+- Database code is under src/db/ and src/server/.
+- Frontend API client is src/lib/api.ts.
+- AVIF implementation is src/lib/imaging.ts.
+- The README lists the intended features and known PWA limitations.
+- There is no Android folder or Gradle project in this source archive.
+
+DELIVERABLES
+A. Complete Android Studio project with Gradle wrapper and all source/assets.
+B. A GitHub Actions workflow that builds a debug APK automatically.
+C. A signed/release APK only after the debug APK is successfully built and tested.
+D. Simple installation instructions for a non-programmer.
+
+BUILD/QUALITY RULE
+First make the app build. Then test every feature above. Do not deliver a placeholder APK, a static mockup, a remote-webview wrapper, or a reduced-feature starter app as the finished result.

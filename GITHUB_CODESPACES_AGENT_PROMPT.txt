@@ -1,0 +1,60 @@
+PRISM GALLERY — GITHUB CODESPACES / AI CODING AGENT TASK
+
+You are working inside the GitHub repository containing the original Prism Gallery source project.
+Your job is to convert THIS EXISTING PROJECT into a genuine, locally functioning Android app and produce an installable APK.
+
+IMPORTANT: Do not stop after explaining the plan. Inspect the repository, make the changes, run builds/tests, fix errors, and commit the finished source changes in the workspace. Do not claim completion unless the APK build actually succeeds.
+
+PROJECT FACTS
+- Existing app: Next.js 16 + React 19 + TypeScript.
+- This repository is a web/PWA project, NOT an Android Studio project.
+- Existing UI and features are in src/.
+- API/backend/database code is under src/app/api/, src/db/, and src/server/.
+- Frontend API client: src/lib/api.ts.
+- AVIF implementation: src/lib/imaging.ts.
+- AVIF decoder WASM asset is currently missing; restore the correct compatible asset and verify it.
+- There is currently no Android/ Gradle project.
+
+NON-NEGOTIABLE PRODUCT REQUIREMENTS
+1. Preserve the existing Prism Gallery design, screens, and functionality. Do not replace it with a demo, simplified gallery, or generic template.
+2. Home must display ONLY the Camera folder. Other folders/albums belong on the Albums screen.
+3. Keep both ordinary tap-based multi-selection and press-and-hold for about 2 seconds followed by drag-to-select/deselect across items.
+4. Preserve photo viewing, photo editing, video playback/editing, albums, sorting, pinning/reordering, favourites, archive, trash, search, settings, and private vault.
+5. Make the app work offline/on-device without a permanently running website, remote PostgreSQL server, or remote backend.
+6. Replace server-only API/database/storage functionality with a suitable Android-native/local architecture. Use Android MediaStore and/or Storage Access Framework for media access, plus a robust local database.
+7. Follow Android permission, scoped-storage, and user-confirmed deletion rules. Never bypass Android security restrictions.
+8. Keep private-vault security real: use Android Keystore-backed key management and authenticated encryption. Never store passwords or encryption keys in plaintext.
+9. Target Android 10 (API 29) and newer. Optimize for low-memory phones with 4 GB RAM: use thumbnails, paging, bounded caches, and avoid decoding full-resolution images for grids.
+10. AVIF decoding must work independently of Android's native decoder. Include the correct @jsquash/avif WASM decoder asset at the expected path (/codecs/avif_dec.wasm), or implement and verify an equivalent compatible solution.
+11. Do not claim any feature is complete unless it is implemented and tested. Clearly list any feature that cannot be preserved exactly.
+
+IMPLEMENTATION APPROACH
+- First inspect the entire codebase and README; map every screen, API call, data model, and feature.
+- Choose an architecture that can genuinely run locally on Android. A Capacitor/WebView shell is acceptable ONLY if all required local media access, persistence, editing, video, and vault functionality is implemented through reliable native plugins/bridges. A remote website wrapper is NOT acceptable.
+- If Next.js server components/API routes cannot run in the packaged app, refactor the app to a compatible client/static build and move required operations to native Android code or a local on-device service. Do not silently drop server features.
+- Add a complete Android project, Gradle wrapper, app icons/name, permissions, native media integration, local persistence, and required assets.
+- Add a GitHub Actions workflow that builds a debug APK on pushes and workflow_dispatch.
+- Keep dependencies compatible with the repository and document exact build commands.
+
+BUILD AND TEST ORDER
+A. Run dependency installation, type checking, linting, and the web production build where applicable. Fix actual errors.
+B. Implement Android integration and native/local replacements.
+C. Build the debug APK using Gradle. Do not proceed as if successful if the build fails.
+D. Run available automated tests and inspect the APK contents/manifest. Verify launch/install if an emulator is available.
+E. Provide a feature-by-feature verification checklist with PASS / PARTIAL / NOT IMPLEMENTED and honest reasons.
+F. Only after a successful debug build, document how to create a signed release APK. Do not invent signing credentials or commit keystores/secrets.
+
+DELIVERABLES
+- Complete Android Studio project and Gradle wrapper in this repository.
+- GitHub Actions workflow at .github/workflows/ that builds the debug APK.
+- Successful debug APK artifact available from the workflow run.
+- Clear instructions for downloading and installing the APK on an Android 10+ phone.
+- Feature verification checklist and known limitations.
+- Keep the original source history/files as much as practical; do not delete working features merely to make a build pass.
+
+WORKING RULES
+- Work in small, verifiable stages.
+- Before major architectural changes, explain the intended approach briefly in the repository documentation, then implement it.
+- Do not fabricate test results, APK paths, screenshots, or successful builds.
+- If a required capability cannot be implemented in the available environment, state exactly what is blocked and leave the source in a buildable, honest state.
+- At the end, report the exact APK artifact path or GitHub Actions artifact name ONLY if it was actually produced.
