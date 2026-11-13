@@ -27,7 +27,9 @@ jobs:
         run: npm install && npm install @capacitor/core @capacitor/cli @capacitor/android
 
       - name: Restore AVIF WASM decoder
-        run: mkdir -p public/codecs && cp $(find node_modules/@jsquash/avif -name avif_dec.wasm | head -n 1) public/codecs/avif_dec.wasm
+        run: |
+          mkdir -p public/codecs
+          cp $(find node_modules/@jsquash/avif -name avif_dec.wasm | head -n 1) public/codecs/avif_dec.wasm
 
       - name: Prepare static export
         run: node scripts/prep.cjs
@@ -38,11 +40,16 @@ jobs:
       - name: Add Android project
         run: npx cap add android
 
-      - name: Add permissions and sync Android
-        run: node -e 'const fs=require("fs"),p="android/app/src/main/AndroidManifest.xml";let m=fs.readFileSync(p,"utf8");if(!m.includes("READ_MEDIA_IMAGES")){m=m.replace("<application","<uses-permission android:name=\"android.permission.READ_MEDIA_IMAGES\" />\n    <uses-permission android:name=\"android.permission.READ_MEDIA_VIDEO\" />\n    <uses-permission android:name=\"android.permission.READ_EXTERNAL_STORAGE\" android:maxSdkVersion=\"32\" />\n    <uses-permission android:name=\"android.permission.WRITE_EXTERNAL_STORAGE\" android:maxSdkVersion=\"29\" />\n    <uses-permission android:name=\"android.permission.MANAGE_EXTERNAL_STORAGE\" />\n\n    <application android:requestLegacyExternalStorage=\"true\"");fs.writeFileSync(p,m);}' && npx cap sync android
+      - name: Configure Android permissions and native plugin
+        run: |
+          node scripts/prep-android.cjs
+          npx cap sync android
 
       - name: Build Debug APK
-        run: cd android && chmod +x gradlew && ./gradlew assembleDebug --no-daemon
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
