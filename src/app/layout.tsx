@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 import { AppShell } from "@/components/app-shell";
+import { StorageGate } from "@/components/storage-gate";
 
 export const metadata: Metadata = {
   title: "Prism Gallery",
@@ -28,9 +29,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       </head>
       <body className="antialiased">
         <Providers>
-          <AppShell>{children}</AppShell>
+          <StorageGate>
+            <AppShell>{children}</AppShell>
+          </StorageGate>
         </Providers>
       </body>
     </html>
   );
-}
+} 
