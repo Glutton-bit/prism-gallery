@@ -55,7 +55,7 @@ export function Providers({ children }: { children: ReactNode }) {
     let cached: Partial<Settings> = {};
     try { cached = JSON.parse(localStorage.getItem("prism-settings") || "{}"); } catch { /* ignore */ }
     api<Settings>("/api/settings")
-      .then((v) => { setS(v); apply(v); localStorage.setItem("prism-settings", JSON.stringify(v)); })
+      .then((v) => { const isObj = (x: unknown) => !!x && typeof x === "object" && !Array.isArray(x); const m: Settings = { ...defaultSettings, ...cached, ...(isObj(v?.sorts) ? v : {}) }; if (!isObj(m.sorts)) m.sorts = {}; if (!isObj(m.groups)) m.groups = {}; setS(m); apply(m); localStorage.setItem("prism-settings", JSON.stringify(m)); })
       .catch(() => { const v = { ...defaultSettings, ...cached }; setS(v); apply(v); })
       .finally(() => setReady(true));
     if ("serviceWorker" in navigator && location.protocol !== "file:") navigator.serviceWorker.register("/sw.js").catch(() => {});
