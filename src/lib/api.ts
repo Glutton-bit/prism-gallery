@@ -240,6 +240,39 @@ async function handleAndroidApi(url: string, init?: RequestInit): Promise<unknow
     return { items: list.slice(offset, offset + limit), total: list.length, offset, noCamera } as MediaPage;
   }
 
+    if (pathname === "/api/storage") return { thumbs: 0, previews: 0, originals: 0 };
+
+  if (pathname === "/api/discover") {
+    const { items, albums } = await ensureScanned();
+    const type = params.get("type") ?? "";
+    const live = items.filter((i) => !i.trashedAt && !i.vaulted);
+    const cnt = (f: (i: Item) => boolean) => live.filter(f).length;
+    const sum = (l: Item[]) => l.reduce((a, i) => a + i.size, 0);
+    if (type === "stats") {
+      const trash = items.filter((i) => Boolean(i.trashedAt));
+      const vault = items.filter((i) => i.vaulted && !i.trashedAt);
+      return {
+        total: live.length, size: sum(live), photos: cnt((i) => matchesCat(i, "photos")), videos: cnt((i) => matchesCat(i, "videos")),
+        screenshots: cnt((i) => matchesCat(i, "screenshots")), screenrec: cnt((i) => matchesCat(i, "screenrec")), gifs: cnt((i) => matchesCat(i, "gifs")),
+        downloads: cnt((i) => matchesCat(i, "downloads")), favorites: cnt((i) => i.favorite), edited: cnt((i) => matchesCat(i, "edited")),
+        viewed: cnt((i) => matchesCat(i, "viewed")), large: cnt((i) => matchesCat(i, "large")), archived: cnt((i) => i.archived),
+        trash: trash.length, trashSize: sum(trash), vault: vault.length, vaultSize: sum(vault),
+        byAlbum: albums.map((a) => ({ id: a.id, name: a.name, size: a.size, count: a.count })),
+      };
+    }
+    if (type === "calendar") {
+      const m = new Map<string, { day: string; count: number; coverId: number }>();
+      for (const i of live) { if (i.archived) continue; const day = i.takenAt.slice(0, 10); const e = m.get(day); if (e) e.count++; else m.set(day, { day, count: 1, coverId: i.id }); }
+      return { days: [...m.values()] };
+    }
+    if (type === "timeline") {
+      const m = new Map<string, { year: number; month: number; count: number; coverId: number }>();
+      for (const i of live) { if (i.archived) continue; const d = new Date(i.takenAt); const k = `${d.getFullYear()}-${d.getMonth() + 1}`; const e = m.get(k); if (e) e.count++; else m.set(k, { year: d.getFullYear(), month: d.getMonth() + 1, count: 1, coverId: i.id }); }
+      return { months: [...m.values()].sort((a, b) => b.year - a.year || b.month - a.month) };
+    }
+    return { memories: [], groups: [], points: [], places: [] };
+  }
+
   return { ok: true, items: [], groups: [], total: 0 };
 }
 
