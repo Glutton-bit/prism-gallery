@@ -2,20 +2,38 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Check, Heart, ImageOff, Play, Circle } from "lucide-react";
 import type { Item } from "@/lib/types";
-import { thumbUrl } from "@/lib/api";
+import { thumbUrl, ensureThumb } from "@/lib/api";
+import { isNativeAndroid } from "@/components/storage-gate";
 import { fmtDur, groupLabel } from "@/lib/format";
 
 type CellProps = { it: Item; idx: number; selecting: boolean; selected: boolean; badge?: string };
 const Cell = memo(function Cell({ it, idx, selecting, selected, badge }: CellProps) {
   const [err, setErr] = useState(false);
+  const native = isNativeAndroid();
+  const [src, setSrc] = useState<string | null>(() => (native ? null : thumbUrl(it)));
+  const ref = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!native) return;
+    const el = ref.current;
+    if (!el) return;
+    let alive = true;
+    const io = new IntersectionObserver((es) => {
+      if (!es[0].isIntersecting) return;
+      io.disconnect();
+      ensureThumb(it).then((u) => { if (alive && u) { setErr(false); setSrc(u); } });
+    }, { rootMargin: "800px" });
+    io.observe(el);
+    return () => { alive = false; io.disconnect(); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [it.id, native]);
   return (
-    <button data-idx={idx} aria-label={it.name} className="relative block aspect-square w-full select-none overflow-hidden bg-black/10 text-left dark:bg-white/10" style={{ WebkitTouchCallout: "none" }}>
+    <button ref={ref} data-idx={idx} aria-label={it.name} className="relative block aspect-square w-full select-none overflow-hidden bg-black/10 text-left dark:bg-white/10" style={{ WebkitTouchCallout: "none" }}>
       <div className={`h-full w-full transition-transform duration-150 ${selected ? "scale-[0.86] rounded-xl" : ""} overflow-hidden`}>
         {err || !it.width && it.kind === "image" ? (
           <div className="grid h-full w-full place-items-center muted"><ImageOff size={22} /><span className="absolute bottom-6 text-[10px] font-semibold uppercase">{it.format}</span></div>
-        ) : (
-          <img src={thumbUrl(it)} alt="" loading="lazy" decoding="async" draggable={false} onError={() => setErr(true)} className="pointer-events-none h-full w-full object-cover" />
-        )}
+        ) : src ? (
+          <img src={src} alt="" loading="lazy" decoding="async" draggable={false} onError={() => setErr(true)} className="pointer-events-none h-full w-full object-cover" />
+        ) : null}
       </div>
       {it.kind === "video" && (
         <span className="on-media pointer-events-none absolute bottom-1 right-1 flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-semibold"><Play size={9} fill="currentColor" />{fmtDur(it.durationMs)}</span>
