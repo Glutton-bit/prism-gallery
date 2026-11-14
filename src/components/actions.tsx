@@ -18,13 +18,8 @@ export function useVaultGate() {
     let st = await vaultStatus();
     if (st.unlocked) return true;
     if (!st.configured) {
-      const ok = await d.confirm({ title: "Create your private folder", message: "Private files are encrypted (AES-256-GCM) with a key protected by your PIN. Next, choose a 4–8 digit PIN. You can switch to a password in Settings → Privacy.", confirmText: "Continue" });
-      if (!ok) return false;
-      const pin = await d.prompt({ title: "Choose a PIN", message: "4–8 digits", type: "password", placeholder: "PIN" });
-      if (!pin) return false;
-      const again = await d.prompt({ title: "Confirm PIN", type: "password", placeholder: "Repeat PIN" });
-      if (again !== pin) { d.toast("PINs did not match"); return false; }
-      try { await post("/api/vault", { action: "setup", authType: "pin", secret: pin }); return true; } catch (e) { d.toast((e as Error).message); return false; }
+      d.toast("The Private folder isn’t available in this version yet");
+      return false;
     }
     const secret = await d.prompt({ title: "Unlock private folder", message: st.authType === "password" ? "Enter your password" : "Enter your PIN", type: "password", placeholder: st.authType === "password" ? "Password" : "PIN", confirmText: "Unlock" });
     if (!secret) return false;
@@ -88,7 +83,7 @@ export function useActions(cfg: { albumId?: number; onChange: (c: Change) => voi
       if (!(await gate())) return;
       await batch("hide", ids(xs));
       onChange({ type: "remove", ids: ids(xs) });
-      d.toast(`Moved ${xs.length} to the private folder (encrypted)`);
+      d.toast(`Moved ${xs.length} to the private folder`);
     }),
     unhide: (xs: Item[]) => run(async () => { await batch("unhide", ids(xs)); onChange({ type: "remove", ids: ids(xs) }); d.toast("Restored from private folder"); }),
     toTop: (xs: Item[]) => run(async () => { await batch("toTop", ids(xs)); onChange({ type: "reload" }); }),
