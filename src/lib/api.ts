@@ -32,11 +32,37 @@ function saveMeta(m: LocalMeta) {
   try { if (typeof window !== "undefined") localStorage.setItem(META_KEY, JSON.stringify(m)); } catch {}
 }
 
+type RawScan = { items: Item[]; albums: Album[] };
+function idbOpen(): Promise<IDBDatabase> {
+  return new Promise((res, rej) => {
+    const r = indexedDB.open("prism-scan-v1", 1);
+    r.onupgradeneeded = () => { r.result.createObjectStore("kv"); };
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  });
+}
+async function idbGet<T>(key: string): Promise<T | null> {
+  try {
+    const db = await idbOpen();
+    return await new Promise<T | null>((res) => {
+      const q = db.transaction("kv").objectStore("kv").get(key);
+      q.onsuccess = () => res((q.result as T) ?? null);
+      q.onerror = () => res(null);
+    });
+  } catch { return null; }
+}
+async function idbSet(key: string, val: unknown): Promise<void> {
+  try { const db = await idbOpen(); db.transaction("kv", "readwrite").objectStore("kv").put(val, key); } catch {}
+}
+
 async function ensureScanned(force = false): Promise<{ items: Item[]; albums: Album[] }> {
   if (!force && scanCache && Date.now() - scanCache.ts < 8000) return { items: scanCache.items, albums: scanCache.albums };
   if (!force && scanPending) return scanPending;
   scanPending = (async () => {
-    const raw = await PrismStorage.scanMedia();
+    const saved: RawScan | null = !force && !scanCache ? await idbGet<RawScan>("raw") : null;
+    const raw: RawScan = saved ?? (await PrismStorage.scanMedia());
+    if (saved) setTimeout(() => { void ensureScanned(true).catch(() => {}); }, 50);
+    else void idbSet("raw", raw);
     const meta = loadMeta();
     const delSet = new Set(meta.deletedIds);
     const items: Item[] = [];
@@ -206,8 +232,9 @@ async function handleAndroidApi(url: string, init?: RequestInit): Promise<unknow
   if (pathname === "/api/media" && method === "GET") {
     const { items, albums } = await ensureScanned();
     const scope = params.get("scope") ?? "all";
-    const aid = params.get("albumId");
-    const cat = params.get("category") ?? params.get("cat") ?? params.get("slug") ?? "";
+    const aid = params.get("albumId") ?? params.get("album");
+    const CAT_SCOPES = ["photos", "screenshots", "screenrec", "videos", "gifs", "downloads", "recent", "edited", "viewed", "large"];
+    const cat = params.get("category") ?? params.get("cat") ?? params.get("slug") ?? (CAT_SCOPES.includes(scope) ? scope : "");
     const q = (params.get("q") ?? params.get("search") ?? "").trim().toLowerCase();
     const kind = params.get("kind");
     const sort = params.get("sort") ?? "takenAt";
@@ -219,7 +246,7 @@ async function handleAndroidApi(url: string, init?: RequestInit): Promise<unknow
     let noCamera = false;
 
     if (scope === "trash") list = list.filter((i) => Boolean(i.trashedAt));
-    else if (scope === "vault") list = list.filter((i) => i.vaulted && !i.trashedAt);
+    else if (scope === "vault" || scope === "hidden") list = list.filter((i) => i.vaulted && !i.trashedAt);
     else if (scope === "archive" || scope === "archived") list = list.filter((i) => i.archived && !i.trashedAt && !i.vaulted);
     else if (scope === "favorites") list = list.filter((i) => i.favorite && !i.trashedAt && !i.vaulted);
     else if (scope === "album" && aid !== null) list = list.filter((i) => i.albumId === Number(aid) && !i.trashedAt && !i.vaulted);
@@ -240,7 +267,7 @@ async function handleAndroidApi(url: string, init?: RequestInit): Promise<unknow
     return { items: list.slice(offset, offset + limit), total: list.length, offset, noCamera } as MediaPage;
   }
 
-    if (pathname === "/api/storage") return { thumbs: 0, previews: 0, originals: 0 };
+  if (pathname === "/api/storage") return { thumbs: 0, previews: 0, originals: 0 };
 
   if (pathname === "/api/discover") {
     const { items, albums } = await ensureScanned();
@@ -304,4 +331,19 @@ export const thumbUrl = (i: Pick<Item, "id" | "modifiedAt" | "vaulted"> & { sour
 export const prevUrl = (i: Pick<Item, "id" | "modifiedAt" | "hasPreview"> & { sourcePath?: string | null }) => isNativeAndroid() ? localSrc(i.id, false, i.sourcePath) : `/api/media/${i.id}/file?v=${i.hasPreview ? "prev" : "orig"}&t=${ver(i)}`;
 export const origUrl = (i: Pick<Item, "id" | "modifiedAt"> & { sourcePath?: string | null }) => isNativeAndroid() ? localSrc(i.id, false, i.sourcePath) : `/api/media/${i.id}/file?v=orig&t=${ver(i)}`;
 export const batch = (action: string, ids: number[], extra: Record<string, unknown> = {}) => post<{ ok: boolean; removed?: number }>("/api/media/batch", { action, ids, ...extra });
+const thumbInflight = new Map<number, Promise<string | null>>();
+export function ensureThumb(i: { id: number; kind: string; sourcePath?: string | null }): Promise<string | null> {
+  if (!isNativeAndroid()) return Promise.resolve(null);
+  const have = thumbCache.get(i.id);
+  if (have) return Promise.resolve(Capacitor.convertFileSrc(have));
+  let p = thumbInflight.get(i.id);
+  if (!p) {
+    p = PrismStorage.getThumb({ id: i.id, kind: i.kind, sourcePath: i.sourcePath ?? null })
+      .then((r) => { if (!r.path) return null; thumbCache.set(i.id, r.path); return Capacitor.convertFileSrc(r.path); })
+      .catch(() => null)
+      .finally(() => { thumbInflight.delete(i.id); });
+    thumbInflight.set(i.id, p);
+  }
+  return p;
+}
 // END OF api.ts
