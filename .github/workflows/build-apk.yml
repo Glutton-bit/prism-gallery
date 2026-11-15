@@ -45,6 +45,11 @@ jobs:
           node scripts/prep-android.cjs
           npx cap sync android
 
+      - name: Use the fixed signing key (so each new APK installs over the old one)
+        run: |
+          mkdir -p ~/.android
+          cp debug.keystore ~/.android/debug.keystore
+
       - name: Build Debug APK
         run: |
           cd android
